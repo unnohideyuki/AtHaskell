@@ -8,9 +8,7 @@ import qualified Data.Vector.Unboxed         as V
 import qualified Data.Vector.Unboxed.Mutable as VM
 
 readInt = fst . fromJust . BS.readInt
-readIntList = map readInt . BS.words
 getInt = readInt <$> BS.getLine
-getIntList = readIntList <$> BS.getLine
 getIntVec n = V.unfoldrN n (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
 
 main = do
@@ -18,7 +16,7 @@ main = do
   as <- getIntVec n
 
   cs <- VM.new 61
-  forM_ [0..60] $ \i -> VM.write cs i (0::Int)
+  VM.set cs (0::Int)
 
   forM_ [0..n-1] $ \i -> do
     let a = as V.! i
@@ -26,13 +24,11 @@ main = do
       when (testBit a j) $ do
         c <- VM.read cs j
         VM.write cs j (c+1)
+  cs' <- V.freeze cs
 
-  let calc i x | i == -1 = return $ x `mod` 1000000007
-               | otherwise = do
-                   c <- VM.read cs i
-                   let c1 = fromIntegral c :: Integer
+  let calc i c a = let c1 = fromIntegral c :: Integer
                        c2 = fromIntegral (n-c) :: Integer
-                       x' = c1 * c2 * bit i
-                   calc (i-1) (x+x')
-  ans <- calc 60 0
-  print ans
+                   in
+                     c1 * c2 * bit i + a
+
+  print $ V.ifoldr calc 0 cs' `mod` 1000000007
