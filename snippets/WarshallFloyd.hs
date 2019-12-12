@@ -1,28 +1,22 @@
+import           Control.Exception  (assert)
 import           Control.Monad
 import qualified Control.Monad.ST   as ST
 import qualified Data.Array.ST      as ST
 import qualified Data.Array.Unboxed as A
 import           Data.Maybe
 
-{-
-    public static void WarshallFloyd(int[,] d, int v)
-    {
-        for (int k = 0; k < v; k++)
-            for (int i = 0; i < v; i++)
-                for (int j = 0; j < v; j++)
-                    d[i, j] = Math.Min(d[i, j], d[i, k] + d[k, j]);
-    }
--}
-
-warshallFloyd ::
-  A.UArray (Int, Int) Int -> Int -> A.UArray (Int, Int) Int
-warshallFloyd iarr n = oarr
+warshallFloyd :: A.UArray (Int, Int) Int -> A.UArray (Int, Int) Int
+warshallFloyd iarr = oarr
   where
-    oarr = ST.runSTUArray $ do
+    l  = (fst . fst . A.bounds) iarr
+    l' = (snd . fst . A.bounds) iarr
+    r  = (fst . snd . A.bounds) iarr
+    r' = (snd . snd . A.bounds) iarr
+    oarr = assert (l==l' && r==r') $ ST.runSTUArray $ do
       d <- ST.thaw iarr
-      forM_ [1..n] $ \k -> do
-        forM_ [1..n] $ \i -> do
-          forM_ [1..n] $ \j -> do
+      forM_ [l..r] $ \k -> do
+        forM_ [l..r] $ \i -> do
+          forM_ [l..r] $ \j -> do
             dik <- ST.readArray d (i,k)
             dkj <- ST.readArray d (k,j)
             dij <- ST.readArray d (i,j)
@@ -42,6 +36,6 @@ main = do
         forM_ graph $ \(i,v) ->
           ST.writeArray marr i v
         return marr
-  print $ A.assocs $ warshallFloyd arr 6
+  print $ A.assocs $ warshallFloyd arr
 
 
