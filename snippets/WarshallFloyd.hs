@@ -14,8 +14,8 @@ warshallFloyd iarr = oarr
     r' = (snd . snd . A.bounds) iarr
     oarr = assert (l==l' && r==r') $ ST.runSTUArray $ do
       d <- ST.thaw iarr
-      forM_ [l..r] $ \k -> do
-        forM_ [l..r] $ \i -> do
+      forM_ [l..r] $ \k ->
+        forM_ [l..r] $ \i ->
           forM_ [l..r] $ \j -> do
             dik <- ST.readArray d (i,k)
             dkj <- ST.readArray d (k,j)
