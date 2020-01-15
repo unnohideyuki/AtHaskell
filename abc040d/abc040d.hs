@@ -54,13 +54,13 @@ getInt = readInt <$> BS.getLine
 getIntList = readIntList <$> BS.getLine
 
 -- quickSortVec from https://gist.github.com/kazu-yamamoto/3051375
--- quickSortVec :: (Ord a, Unbox a) => [a] -> [a]
+quickSortList :: (Ord a, VM.Unbox a) => [a] -> [a]
 quickSortList xs = ST.runST $ do
-  arr <- V.unsafeThaw $ V.fromList xs
-  let beg = 0
-      end = VM.length arr - 1
-  quickSortVec beg end arr
-  V.toList <$> V.unsafeFreeze arr
+    arr <- V.thaw $ V.fromList xs
+    let beg = 0
+        end = VM.length arr - 1
+    quickSortVec beg end arr
+    V.toList <$> V.freeze arr
 
 quickSortVec l u arr
   | l >= u    = return ()
@@ -103,7 +103,9 @@ main = do
   q <- getInt
   t' <- forM [0..(q-1)] $ \i -> do [v, w] <- getIntList
                                    return ((-w), (i, v))
-  let wvs = quickSortList t'
+  v' <- V.thaw $ V.fromList t'
+  quickSortVec 0 (VM.length v' -1) v'
+  wvs <- V.toList <$> V.freeze v'
 
   ans <- VM.new q
   uf <- newUF (n+1)
