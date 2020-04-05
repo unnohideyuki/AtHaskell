@@ -1,0 +1,28 @@
+#!/bin/sh
+# -*- mode:Shell -*-
+
+c=$1
+
+echo testing $c
+
+passed=0
+for fin in in/*     
+do
+    bname=`basename $fin`
+    fout="out/$bname"
+    echo -n test $bname "..."
+    $c < $fin > actual$bname
+    diff -w actual$bname $fout
+    if [ $? -eq 0 ];then
+	echo " passed."
+    else
+	echo " failed."
+	exit 1
+    fi
+    passed=`expr $passed \+ 1`
+done
+
+echo ----------------
+echo Passed $passed tests.
+echo ----------------
+
