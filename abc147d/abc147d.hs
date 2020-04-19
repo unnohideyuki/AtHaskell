@@ -26,9 +26,9 @@ main = do
         VM.write cs j (c+1)
   cs' <- V.freeze cs
 
-  let calc i c a = let c1 = fromIntegral c :: Integer
+  let calc a i c = let c1 = fromIntegral c :: Integer
                        c2 = fromIntegral (n-c) :: Integer
                    in
                      c1 * c2 * bit i + a
 
-  print $ V.ifoldr calc 0 cs' `mod` 1000000007
+  print $ V.ifoldl' calc 0 cs' `mod` 1000000007
