@@ -27,6 +27,9 @@ readIntegerList = map readInteger . BS.words
 getInteger = readInteger <$> BS.getLine
 getIntegerList = readIntegerList <$> BS.getLine
 
+inf :: Int
+inf = 10^18
+
 main = do
   print ""
 
