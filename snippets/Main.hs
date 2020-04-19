@@ -11,6 +11,7 @@ import           Data.Foldable
 import           Data.List
 import           Data.Maybe
 import qualified Data.Sequence               as Seq
+import qualified Data.Set                    as Set
 import qualified Data.Vector.Unboxed         as V
 import qualified Data.Vector.Unboxed.Mutable as VM
 import           Debug.Trace
