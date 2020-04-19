@@ -17,9 +17,11 @@ eFrm  (frm, _, _)  = frm
 eTo   (_, to, _)   = to
 eCost (_, _, cost) = cost
 
+shortestPath :: Int -> V.Vector (Int, Int, Int) -> Int
+  -> IO (Maybe (V.Vector Int))
 shortestPath s edges numV = do
   let numE = V.length edges
-      inf = 10^9 :: Int
+      inf = 10^18 :: Int
 
   d <- VM.new numV
   VM.set d inf

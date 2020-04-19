@@ -21,7 +21,7 @@ type Graph_dijk = VB.Vector (V.Vector (Int, Int))
 dijkstra :: Int -> Graph_dijk -> Int -> IO (V.Vector Int)
 dijkstra s g numV = do
 
-  let inf = 10^9 :: Int
+  let inf = 10^18 :: Int
   d <- VM.new numV
   VM.set d inf
   VM.write d s 0
