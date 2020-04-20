@@ -1,5 +1,7 @@
+{-# LANGUAGE BangPatterns #-}
 import           Control.Exception           (assert)
 import           Control.Monad
+import           Control.Monad.Primitive
 import qualified Control.Monad.ST            as ST
 import qualified Data.Array.IO               as IO
 import qualified Data.Array.ST               as ST
