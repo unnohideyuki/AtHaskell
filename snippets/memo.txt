@@ -4,9 +4,12 @@
 -- IO.newArray needs a type signature
   arr <- IO.newArray ((1,1),(n,n)) infty :: IO (IO.IOUArray (Int, Int) Int)
 
+  arr' <- IO.freeze arr
+  arr2 <- IO.thaw arr'
+
   -- freeze <- thaw
   v <- V.freeze
-  d <- VM.thaw d'
+  d <- V.thaw d'
 
 -}
 
