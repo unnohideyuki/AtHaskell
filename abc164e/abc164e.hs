@@ -113,7 +113,7 @@ main = do
 
   g' <- VB.freeze g
 
-  let n_start = fnode 0 s0
+  let n_start = fnode 0 (min max_silvers s0)
   d <- dijkstra n_start g' max_nodes
 
   let solve i j res | j > max_silvers = res
