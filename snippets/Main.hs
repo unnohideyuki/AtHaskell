@@ -33,6 +33,4 @@ inf :: Int
 inf = 10^18
 
 main = do
-  print ""
-
-
+  
