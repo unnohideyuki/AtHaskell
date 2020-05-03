@@ -11,9 +11,12 @@ import qualified Data.ByteString.Char8       as BS
 import           Data.Char
 import           Data.Foldable
 import           Data.List
+import qualified Data.Map.Strict             as Map
 import           Data.Maybe
 import qualified Data.Sequence               as Seq
 import qualified Data.Set                    as Set
+import qualified Data.Vector                 as VB
+import qualified Data.Vector.Mutable         as VBM
 import qualified Data.Vector.Unboxed         as V
 import qualified Data.Vector.Unboxed.Mutable as VM
 import           Debug.Trace
@@ -33,4 +36,3 @@ inf :: Int
 inf = 10^18
 
 main = do
-  
