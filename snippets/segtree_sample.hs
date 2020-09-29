@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns, DatatypeContexts #-}
+{-# LANGUAGE DatatypeContexts #-}
 import           Control.Exception           (assert)
 import           Control.Monad
 import           Control.Monad.Primitive
@@ -18,22 +18,30 @@ import qualified Data.Set                    as Set
 import qualified Data.Vector                 as VB
 import qualified Data.Vector.Mutable         as VBM
 import qualified Data.Vector.Unboxed         as V
-import qualified Data.Vector.Unboxed.Mutable as VM
 import           Data.Vector.Unboxed.Base
+import qualified Data.Vector.Unboxed.Mutable as VM
 import           Debug.Trace
 
-readInt = fst . fromJust . BS.readInt
-readIntList = map readInt . BS.words
-getInt = readInt <$> BS.getLine
-getIntList = readIntList <$> BS.getLine
-getIntVec n = V.unfoldrN n (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
-
-readInteger = fst . fromJust . BS.readInteger
-readIntegerList = map readInteger . BS.words
-getInteger = readInteger <$> BS.getLine
-getIntegerList = readIntegerList <$> BS.getLine
-
-inf :: Int
-inf = 10^18
+import           Segtree
 
 main = do
+  let inf = 10^9 :: Int
+  seg <- fromVecSEGT min inf (V.fromList [5, 3, 7, 9, 6, 4, 1, 2])
+
+  s <- showSEGT seg
+  putStrLn s
+
+  min05 <- prodSEGT seg 0 6
+  print min05
+
+  min_all <- all_prodSEGT seg
+  print min_all
+
+  min24 <- prodSEGT seg 2 5
+  print min24
+
+  min23 <- prodSEGT seg 2 4
+  print min23
+
+
+
