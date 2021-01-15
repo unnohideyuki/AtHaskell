@@ -1,95 +1,79 @@
 {-# LANGUAGE BangPatterns #-}
 
-data IOUQueue a = IOUQueue { uq_size :: !Int
-                           , uq_orig :: !Int
-                           , uq_i    :: !Int
-                           , uq_j    :: !Int
-                           , uq_v    :: VM.MVector (PrimState IO) a
+data IOUQueue a = IOUQueue { uq_max_size :: !Int
+                           , uq_i        :: !Int
+                           , uq_j        :: !Int
+                           , uq_v        :: VM.MVector (PrimState IO) a
                            }
 
-newUDequeue :: (Unbox a) => Int -> Int -> IO (IOUQueue a)
-newUDequeue sizel sizer = do let sz = sizel + sizer
-                             v <- VM.new sz
-                             return $ IOUQueue sz sizel sizel sizel v
-
-newUQueue :: (Unbox a) => Int -> IO (IOUQueue a)
-newUQueue sz = newUDequeue 0 sz
+newUDeque :: (Unbox a) => Int -> IO (IOUQueue a)
+newUDeque sz = do let k = ceiling $ logBase 2 (fromIntegral sz)
+                      msz = (1 `shiftL` k) - 1
+                  v <- VM.new msz
+                  return $ IOUQueue msz 0 0 v
 
 nullUQ :: (Unbox a) => IOUQueue a -> Bool
-nullUQ uq@(IOUQueue _ _ i j _) = (i == j)
+nullUQ uq@(IOUQueue _ i j _) = (i == j)
 
-poplUQ :: (Unbox a) => IOUQueue a -> IO (IOUQueue a, a)
-poplUQ uq@(IOUQueue sz o i j v) | i < j = do r <- VM.unsafeRead v i
-                                             return (uq{uq_i=i+1}, r)
-                                | otherwise = error "poplUQ: empty queue"
+lengthUQ :: (Unbox a) => IOUQueue a -> Int
+lengthUQ (IOUQueue msz i j _) | i <= j = j - i
+                              | otherwise = (j + msz + 1) - i
 
-popRUQ :: (Unbox a) => IOUQueue a -> IO (IOUQueue a, a)
-popRUQ uq@(IOUQueue sz o i j v) | i < j = do r <- VM.unsafeRead v (j-1)
-                                             return (uq{uq_j=j-1}, r)
-                                | otherwise = error "poprUQ: empty queue"
+popFrontUQ :: (Unbox a) => IOUQueue a -> IO (IOUQueue a, a)
+popFrontUQ uq@(IOUQueue msz i j v) | lengthUQ uq > 0 = do r <- VM.unsafeRead v i
+                                                          let i' = (i+1) .&. msz
+                                                          return (uq{uq_i=i'}, r)
+                                   | otherwise = error "popFrontUQ: empty queue"
 
-recenterUQ :: (Unbox a) => IOUQueue a -> IO (IOUQueue a)
-recenterUQ uq@(IOUQueue sz o i j v)
-  | i == o = return uq
-  | i > o = do let dist = i - o
-               forM_ [i..(j-1)] $ \k -> do
-                 t <- VM.unsafeRead v k
-                 VM.unsafeWrite v (k-dist) t
-               return $ uq{uq_i=i-dist, uq_j=j-dist}
-  | otherwise = do let dist = o - j
-                   forM_ [j-1,(j-2)..i] $ \k -> do
-                     t <- VM.unsafeRead v k
-                     VM.unsafeWrite v (k+dist) t
-                   return $ uq{uq_i=i+dist, uq_j=j+dist}
+popBackUQ :: (Unbox a) => IOUQueue a -> IO (IOUQueue a, a)
+popBackUQ uq@(IOUQueue msz i j v) | lengthUQ uq > 0 = do let j' = (j-1) .&. msz
+                                                         r <- VM.unsafeRead v j'
+                                                         return (uq{uq_j=j'}, r)
+                                  | otherwise = do error "popBackUQ: empty queue"
 
-pushListUQ :: (Unbox a) => IOUQueue a -> [a] -> IO (IOUQueue a)
-pushListUQ uq [] = return uq
-pushListUQ uq@(IOUQueue sz o i j v) (x:xs)
-  | j < sz = do VM.unsafeWrite v j x
-                pushListUQ uq{uq_j=j+1} xs
-  | i > o  = do uq' <- recenterUQ uq
-                pushListUQ uq' (x:xs)
-  | otherwise = error "pushListUQ: overflow"
+pushBackListUQ :: (Unbox a) => IOUQueue a -> [a] -> IO (IOUQueue a)
+pushBackListUQ uq [] = return uq
+pushBackListUQ uq@(IOUQueue msz i j v) (x:xs)
+  | lengthUQ uq < msz = do VM.unsafeWrite v j x
+                           let j' = (j+1) .&. msz
+                           pushBackListUQ uq{uq_j=j'} xs
+  | otherwise = error "pushBackListUQ: overflow"
 
-pushListWithDUQ :: (Unbox a, Unbox b) => IOUQueue (a, b) -> [a] -> b -> IO (IOUQueue (a, b))
-pushListWithDUQ uq [] _ = return uq
-pushListWithDUQ uq@(IOUQueue sz o i j v) (x:xs) d
-  | j < sz = do VM.unsafeWrite v j (x, d)
-                pushListWithDUQ uq{uq_j=j+1} xs d
-  | i > o  = do uq' <- recenterUQ uq
-                pushListWithDUQ uq' (x:xs) d
-  | otherwise = error "pushListWithDUQ: overflow"
+pushBackListWithDUQ :: (Unbox a, Unbox b) => IOUQueue (a, b) -> [a] -> b -> IO (IOUQueue (a, b))
+pushBackListWithDUQ uq [] _ = return uq
+pushBackListWithDUQ uq@(IOUQueue msz i j v) (x:xs) d
+  | lengthUQ uq < msz = do VM.unsafeWrite v j (x, d)
+                           let j' = (j+1) .&. msz
+                           pushBackListWithDUQ uq{uq_j=j'} xs d
+  | otherwise = error "pushBackListWithDUQ: overflow"
 
-pushUQ :: (Unbox a) => IOUQueue a -> a -> IO (IOUQueue a)
-pushUQ uq@(IOUQueue sz o i j v) x
-  | j < sz = do VM.unsafeWrite v j x
-                return $ uq{uq_j=j+1}
-  | i > o = do uq' <- recenterUQ uq
-               pushUQ uq' x
-  | otherwise = error "pushUQ: overflow"
+pushBackUQ :: (Unbox a) => IOUQueue a -> a -> IO (IOUQueue a)
+pushBackUQ uq@(IOUQueue msz i j v) x
+  | lengthUQ uq < msz = do VM.unsafeWrite v j x
+                           let j' = (j+1) .&. msz
+                           return $ uq{uq_j=j'}
+  | otherwise = error "pushBackUQ: overflow"
 
-pushLListUQ :: (Unbox a) => IOUQueue a -> [a] -> IO (IOUQueue a)
-pushLListUQ uq [] = return uq
-pushLListUQ uq@(IOUQueue sz o i j v) (x:xs)
-  | i > 0 = do VM.unsafeWrite v (i-1) x
-               pushLListUQ uq{uq_i=i-1} xs
-  | j < o = do uq' <- recenterUQ uq
-               pushLListUQ uq' (x:xs)
-  | otherwise = error "pushLListUQ: overflow"
+pushFrontListUQ :: (Unbox a) => IOUQueue a -> [a] -> IO (IOUQueue a)
+pushFrontListUQ uq [] = return uq
+pushFrontListUQ uq@(IOUQueue msz i j v) (x:xs)
+  | lengthUQ uq < msz = do let i' = (i-1) .&. msz
+                           VM.unsafeWrite v i' x
+                           pushFrontListUQ uq{uq_i=i'} xs
+  | otherwise = error "pushFrontListUQ: overflow"
 
-pushLListWithDUQ :: (Unbox a, Unbox b) => IOUQueue (a, b) -> [a] -> b -> IO (IOUQueue (a, b))
-pushLListWithDUQ uq [] _ = return uq
-pushLListWithDUQ uq@(IOUQueue sz o i j v) (x:xs) d
-  | i > 0 = do VM.unsafeWrite v (i-1) (x, d)
-               pushLListWithDUQ uq{uq_i=i-1} xs d
-  | j < o = do uq' <- recenterUQ uq
-               pushLListWithDUQ uq' (x:xs) d
-  | otherwise = error "pushLListWithDUQ: overflow"
+pushFrontListWithDUQ :: (Unbox a, Unbox b) => IOUQueue (a, b) -> [a] -> b -> IO (IOUQueue (a, b))
+pushFrontListWithDUQ uq [] _ = return uq
+pushFrontListWithDUQ uq@(IOUQueue msz i j v) (x:xs) d
+  | lengthUQ uq < msz = do let i' = (i-1) .&. msz
+                           VM.unsafeWrite v i' (x, d)
+                           pushFrontListWithDUQ uq{uq_i=i'} xs d
+  | otherwise = error "pushFrontListWithDUQ: overflow"
 
-pushLUQ :: (Unbox a) => IOUQueue a -> a -> IO (IOUQueue a)
-pushLUQ uq@(IOUQueue sz o i j v) x
-  | i > 0 = do VM.unsafeWrite v (i-1) x
-               return $ uq{uq_i=i-1}
-  | j < o = do uq' <- recenterUQ uq
-               pushLUQ uq' x
-  | otherwise = error "pushLUQ: overflow"
+pushFrontUQ :: (Unbox a) => IOUQueue a -> a -> IO (IOUQueue a)
+pushFrontUQ uq@(IOUQueue msz i j v) x
+  | lengthUQ uq < msz = do let i' = (i-1) .&. msz
+                           VM.unsafeWrite v i' x
+                           return $ uq{uq_i=i'}
+  | otherwise = error "pushFrontUQ: overflow"
+
