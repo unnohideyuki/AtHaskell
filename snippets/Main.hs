@@ -26,7 +26,8 @@ readInt = fst . fromJust . BS.readInt
 readIntList = map readInt . BS.words
 getInt = readInt <$> BS.getLine
 getIntList = readIntList <$> BS.getLine
-getIntVec n = V.unfoldrN n (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
+getIntVec !n = V.unfoldrN n (BS.readInt . BS.dropWhile isSpace) <$> BS.getLine
+-- the bang pattern above forces not to remove BangPatterns directive by Stylish Haskell
 
 readInteger = fst . fromJust . BS.readInteger
 readIntegerList = map readInteger . BS.words
